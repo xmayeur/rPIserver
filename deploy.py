@@ -19,9 +19,9 @@ config = project + '.conf'
 for f in deploy_list:
     if f.find('.py') > 0:
         compile(f)
-        put(local_path=f + 'c', remote_path=os.path.join(os.path.expanduser("~"), project, f + 'c'))
+        put(local_path=f + 'c', remote_path='~/'+project+'/'+ f + 'c', use_sudo=True, mode=0755)
     else:
-        put(local_path=f, remote_path=os.path.join(os.path.expanduser("~"), project, f))
+        put(local_path=f, remote_path='~/'+project+'/'+ f , use_sudo=True, mode=0755)
 
 # Stop service, update it and re-start
 with settings(warn_only=True):
