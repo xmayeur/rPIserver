@@ -22,7 +22,8 @@ case "$1" in
     ;;
   stop)
     echo "Stopping script"
-    pkill -f rPIserver
+    pkill -9 -f rPIserver
+    exit 0
     ;;
   start)
     rPIserver stop

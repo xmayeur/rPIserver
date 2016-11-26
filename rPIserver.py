@@ -29,6 +29,9 @@ from kodipydent import Kodi
 from time import sleep
 from functools import wraps
 from datetime import datetime
+from fabric.api import env, settings
+from fabric.api import run as frun
+from fabric.api import local as flocal
 
 project = 'rPIserver'
 INI_file = project + '.cfg'
@@ -58,6 +61,7 @@ methods = {
     'DIM': tdtool.TELLSTICK_DIM
 }
 
+
 def openlog(file):
     # Setup the log handlers to stdout and file.
     log = logging.getLogger(project)
@@ -84,7 +88,8 @@ def openlog(file):
     return log
 
 
-log = openlog(project+'.log')
+log = openlog(project + '.log')
+
 
 def log_to_logger(fn):
     """
@@ -97,14 +102,14 @@ def log_to_logger(fn):
         request_time = datetime.now()
         actual_response = fn(*args, **kwargs)
         # modify this to log exactly what you need:
-        if request.method=='POST':
-            sep='?'
+        if request.method == 'POST':
+            sep = '?'
         else:
-            sep=''
+            sep = ''
         log.info('%s %s %s %s %s' % (request.remote_addr,
                                      request_time,
                                      request.method,
-                                     request.url+sep+request.body.buf,
+                                     request.url + sep + request.body.buf,
                                      response.status))
         return actual_response
 
@@ -187,19 +192,6 @@ def who():
     return 'rPIserver'
 
 
-@route('/halt')
-@protected(check_login)
-def halt():
-    log.info('Command: Shutting system down')
-    subprocess.Popen(['shutdown', '-h', 'now'], stdout=subprocess.PIPE)
-
-
-@route('/stop')
-@protected(check_login)
-def stop():
-    SSLWSGIRefServer.stop()
-
-
 @route('/api')
 @protected(check_login, api=True)
 def display_action():
@@ -207,27 +199,29 @@ def display_action():
     method = request.query.param
 
     try:
-        if action == "Boot_Ubuntu":
-            p = subprocess.Popen(['hostname'], stdout=subprocess.PIPE)
-            out = p.communicate()[0]
-            if out == 'OpenELEC':
-                mypath = '/var/media/berryboot/data'
-                print 'cp ' + mypath + '/default.ubuntu ' + mypath + '/default'
-                print 'cp ' + mypath + '/default.ubuntu ' + mypath + '/default'
-                p = subprocess.Popen(['cp ' + mypath + '/default.ubuntu ' + mypath + '/default'],
-                                     stdout=subprocess.PIPE)
-                p = subprocess.Popen(['shutdown -r now'], stdout=subprocess.PIPE)
-        elif (action == "imaplog") or (action == "log"):
-            if action == "imaplog":
-                logfile = 'imap_monitor.log'
-            elif action == "log":
-                logfile = 'rPIserver.log'
+        if (action == 'spam'):
+            if os.name == 'nt':
+                env.host_string = 'rpiMON'
+                env.user = 'pi'
+                env.use_ssh_config = True
 
-            fields = ('Date', 'Process', 'Severity', 'Description')
-            with open(logfile, 'rb') as f:
-                reader = csv.DictReader(f, fieldnames=fields, delimiter='|')
-                out = json.dumps([row for row in reader], indent=4)
-            response.content_type = 'application/json'
+            if method == "":
+                method = "status"
+
+            with settings(warn_only=True):
+                if os.name == 'nt':
+                    out = frun('sudo service SpamMon %s' % method, capture=True)
+                elif os.name == 'posix':
+                    out = flocal('sudo service SpamMon %s' % method, capture=True)
+
+            response.content_type = 'text/plain'
+            #
+            # fields = ('Date', 'Process', 'Severity', 'Description')
+            # with open(logfile, 'rb') as f:
+            #     reader = csv.DictReader(f, fieldnames=fields, delimiter='|')
+            #     out = json.dumps([row for row in reader], indent=4)
+            # response.content_type = 'application/json'
+            #
             return out
 
         elif method == "":
@@ -241,8 +235,8 @@ def display_action():
             out += line.strip() + '\r\n'
         return out  # template('{{out}}', out=out)
 
-    except:
-        return template('Some error occurred')
+    except Exception, e:
+        return template('Error: %s' % e)
 
 
 @error(404)
@@ -308,21 +302,21 @@ def do_tdcmd():
     :return:
     """
 
-    resp='failed!'
+    resp = 'failed!'
     try:
         id = devices[request.forms.get('id')]
         method = methods[request.forms.get('method')]
         value = request.forms.get('value')
     except:
         id = None
-        method=None
+        method = None
 
     if id is not None and method is not None:
         if method == tdtool.TELLSTICK_DIM:
             try:
                 value = request.forms.get('value')
             except:
-                value=100
+                value = 100
             resp = tdtool.doMethod(id, method, value)
         else:
             resp = tdtool.doMethod(id, method)
@@ -338,8 +332,8 @@ def do_kodistate():
     # /kodistate?id=<device>
     :return: 'ON', 'OFF'
     """
-    id=request.query.id
-    resp=tdtool.getDeviceState(devices[id])
+    id = request.query.id
+    resp = tdtool.getDeviceState(devices[id])
     if resp == 'OFF':
         return 'OFF'
     else:
@@ -372,9 +366,9 @@ def do_kodi():
 
     count = 0
     if method == 'ON':
-        maxcount=10
+        maxcount = 10
     else:
-        maxcount=1
+        maxcount = 1
     while count < maxcount:
         try:
             kodi = Kodi(kodi_ip)
@@ -388,7 +382,6 @@ def do_kodi():
         resp = tdtool.doMethod(devices[id], methods['OFF'])
         return 'Failed'
 
-
     response.content_type = 'application/json'
     if method == 'ON':
         resp = kodi.JSONRPC.Version()
@@ -398,6 +391,7 @@ def do_kodi():
         sleep(5)
         resp = tdtool.doMethod(devices[id], methods[method])
         return 'Kodi off'
+
 
 def send_to_pipe(p):
     while True:
