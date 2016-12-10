@@ -23,7 +23,7 @@ for f in deploy_list:
     else:
         put(local_path=f, remote_path='~/'+project+'/'+ f , use_sudo=True, mode=0755)
 
-put (local_path='wifi_rebooter.sh', remote_path='/usr/local/bin/'+ f , use_sudo=True, mode=0755)
+put (local_path='wifi_rebooter.sh', remote_path='/usr/local/bin/checkwifi.sh' , use_sudo=True, mode=0755)
 
 # Stop service, update it and re-start
 with settings(warn_only=True):

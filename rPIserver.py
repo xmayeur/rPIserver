@@ -375,7 +375,7 @@ def do_kodi():
             break
         except:
             # print 'Retrying...'
-            sleep(10)
+            sleep(1)
             count += 1
     else:
         # resp = tdtool.doMethod(devices[id], methods['OFF'])
