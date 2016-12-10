@@ -210,9 +210,9 @@ def display_action():
 
             with settings(warn_only=True):
                 if os.name == 'nt':
-                    out = frun('sudo service SpamMon %s' % method, capture=True)
+                    out = method + " - " + frun('sudo service SpamMon %s' % method)
                 elif os.name == 'posix':
-                    out = flocal('sudo service SpamMon %s' % method, capture=True)
+                    out = method + " - " + flocal('sudo service SpamMon %s' % method, capture=True)
 
             response.content_type = 'text/plain'
             #
@@ -306,7 +306,6 @@ def do_tdcmd():
     try:
         id = devices[request.forms.get('id')]
         method = methods[request.forms.get('method')]
-        value = request.forms.get('value')
     except:
         id = None
         method = None
@@ -340,10 +339,10 @@ def do_kodistate():
         try:
             kodi = Kodi(rPIs[id])
             resp = kodi.JSONRPC.Ping()
-            return 'ON'
+            return 'Kodi On'
         except:
-            resp = tdtool.doMethod(devices[id], methods['OFF'])
-            return 'OFF'
+            # resp = tdtool.doMethod(devices[id], methods['OFF'])
+            return 'POWERED'
 
 
 @post('/kodi')
@@ -376,21 +375,24 @@ def do_kodi():
             break
         except:
             # print 'Retrying...'
-            sleep(1)
+            sleep(10)
             count += 1
     else:
-        resp = tdtool.doMethod(devices[id], methods['OFF'])
-        return 'Failed'
+        # resp = tdtool.doMethod(devices[id], methods['OFF'])
+        if method == 'ON':
+            return 'POWERED'
+        else:
+            return 'Failed'
 
     response.content_type = 'application/json'
     if method == 'ON':
         resp = kodi.JSONRPC.Version()
-        return 'Kodi on'
+        return 'Kodi On'
     else:
         resp = kodi.System.Shutdown()
         sleep(5)
         resp = tdtool.doMethod(devices[id], methods[method])
-        return 'Kodi off'
+        return 'OFF'
 
 
 def send_to_pipe(p):
@@ -476,3 +478,4 @@ if __name__ == '__main__':
     server_names['SSLWSGIRefServer'] = SSLWSGIRefServer
     install(log_to_logger)
     run(host='0.0.0.0', port=port, server='SSLWSGIRefServer')
+
