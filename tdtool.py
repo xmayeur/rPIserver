@@ -28,6 +28,9 @@ TELLSTICK_DOWN = 256
 
 RASPI_ID = 274164
 SALON_ID = 223659
+SAM_ID = 223659
+NAS_ID = 274165
+
 SUPPORTED_METHODS = TELLSTICK_TURNON | TELLSTICK_TURNOFF | TELLSTICK_BELL | TELLSTICK_DIM | TELLSTICK_UP | TELLSTICK_DOWN
 config_file = 'tdtool.conf'
 
@@ -111,15 +114,16 @@ def listDevices():
 #    response = doRequest('scheduler/setJob', {'id':  id, 'deviceId': deviceId, 'method': methodId, 'methodValue': methodValue, 'type': type, 'hour': hour, 'minute': minute, 'weekdays': weekdays})
 
 def getDeviceState(deviceID):
-    response = doRequest('device/info', {'id': deviceID, 'supportedMethods': 3})
+    response = doRequest('device/info', {'id': deviceID, 'supportedMethods': 255})
     val = int(response['state'])
+    val2 = str(response['statevalue'])
 
     if val == TELLSTICK_TURNON:
         state = 'ON'
     elif val == TELLSTICK_TURNOFF:
         state = 'OFF'
     elif val == TELLSTICK_DIM:
-        state = "DIMMED"
+        state = val2
     elif val == TELLSTICK_UP:
         state = "UP"
     elif val == TELLSTICK_DOWN:
@@ -147,6 +151,8 @@ def doMethod(deviceId, methodId, methodValue=0):
         method = 'up'
     elif methodId == TELLSTICK_DOWN:
         method = 'down'
+    elif methodId == TELLSTICK_DIM:
+        method = 'dim'
 
     if 'error' in response:
         name = ''

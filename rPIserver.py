@@ -32,6 +32,7 @@ from datetime import datetime
 from fabric.api import env, settings
 from fabric.api import run as frun
 from fabric.api import local as flocal
+import socket
 
 project = 'rPIserver'
 INI_file = project + '.cfg'
@@ -42,19 +43,22 @@ user_name = None
 password = None
 cookie_key = 'abH15cGdExsz=='
 host = "0.0.0.0"
-
 url = None
 
 rPIs = {
     'rPI_DAC': '192.168.0.20',
-    'rPI_SPDIF': '192.168.0.13'
+    'rPI_SPDIF': '192.168.0.13',
+    'rpiMON': '192.168.0.12',
+    'NAS': '192.168.0.16',
+    'rPI1': '192.168.0.11'
 }
 devices = {
     'rPI_DAC': 199137,
     'rPI_SPDIF': 274164,
-    'A3': 274166
+    'A3': 274166,
+    'SAM': 223659,
+    'NAS': 274165
 }
-
 methods = {
     'ON': tdtool.TELLSTICK_TURNON,
     'OFF': tdtool.TELLSTICK_TURNOFF,
@@ -106,6 +110,7 @@ def log_to_logger(fn):
             sep = '?'
         else:
             sep = ''
+
         log.info('%s %s %s %s %s' % (request.remote_addr,
                                      request_time,
                                      request.method,
@@ -324,6 +329,18 @@ def do_tdcmd():
     return resp
 
 
+@get('/tdstate')
+@protected(check_login, api=True)
+def do_tdstate():
+    """
+    # /kodistate?id=<device>
+    :return: 'ON', 'OFF'
+    """
+    id = request.query.id
+    response.content_type = 'text/plain'
+    return  tdtool.getDeviceState(devices[id])
+
+
 @get('/kodistate')
 @protected(check_login, api=True)
 def do_kodistate():
@@ -371,10 +388,10 @@ def do_kodi():
     while count < maxcount:
         try:
             kodi = Kodi(kodi_ip)
-            # print 'Connected to Kodi %s' % id
+            print 'Connected to Kodi %s' % id
             break
         except:
-            # print 'Retrying...'
+            print 'Retrying...'
             sleep(1)
             count += 1
     else:
@@ -382,6 +399,7 @@ def do_kodi():
         if method == 'ON':
             return 'POWERED'
         else:
+            print 'Failed'
             return 'Failed'
 
     response.content_type = 'application/json'
@@ -394,6 +412,22 @@ def do_kodi():
         resp = tdtool.doMethod(devices[id], methods[method])
         return 'OFF'
 
+
+@post('/ping')
+@protected(check_login, api=True)
+def do_ping():
+    """
+    Post a command to probe a server connection
+    syntax: https://home.mayeur.be:<port>/ping?id=<nnn>]
+    :return:
+    """
+    dev = rPIs[request.forms.get('id')]
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect((dev, 22))
+        return 'Alive'
+    except socket.error:
+        return 'Failed'
 
 def send_to_pipe(p):
     while True:
