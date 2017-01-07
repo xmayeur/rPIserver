@@ -90,8 +90,6 @@ def openlog(file):
     handler_file.setFormatter(formatter)
     log.addHandler(handler_file)
     return log
-
-
 log = openlog(project + '.log')
 
 
@@ -366,7 +364,7 @@ def do_kodistate():
 @protected(check_login, api=True)
 def do_kodi():
     """
-    # /kodi?id=[rPI_DAC | rPI_SPDIF]&method=['ON'|'OFF']
+    # /kodi?id=[rPI_DAC | rPI_SPDIF]&method=['ON'|'OFF'|'FAV'][&favidx=n]
 
     :return:
     """
@@ -412,6 +410,80 @@ def do_kodi():
         resp = tdtool.doMethod(devices[id], methods[method])
         return 'OFF'
 
+
+@post('/kodiPlay')
+@protected(check_login, api=True)
+def do_kodifav():
+    """
+    # /kodifav?id=[rPI_DAC | rPI_SPDIF]&method=n
+    # n=-1: get favorites list
+    # n= 0, 1, ... : play favorite with index 'n'
+
+    :return:
+    """
+    method = None
+    try:
+        id = request.forms.get('id')
+        method = request.forms.get('method')
+        kodi_ip = rPIs[id]
+    except Exception, e:
+        return 'failed: %s' % e
+
+    try:
+        kodi = Kodi(kodi_ip)
+        r = kodi.JSONRPC.Ping()
+    except Exception,e:
+            return 'failed: %s' % e
+
+
+    if method == 'favourites':
+        fav = []
+        r = kodi.Favourites.GetFavourites(properties=["window", "path", "thumbnail", "windowparameter"])
+        for f in r['result']['favourites']:
+            if f['type'] == 'media':
+                fav.append(f)
+        response.content_type = 'application/json'
+        return json.dumps(fav, indent=4)
+        # return json.dumps(r, indent=4)
+
+    elif method == 'pause':
+        r = kodi.Player.GetActivePlayers()
+        if len(r['result']) != 0:
+            playerid = r['result'][0]['playerid']
+            r = kodi.Player.PlayPause(playerid=playerid)
+            response.content_type = 'application/json'
+            return json.dumps(r, indent=4)
+        else:
+            return ''
+
+    elif method == 'stop':
+        r = kodi.Player.GetActivePlayers()
+        if len(r['result']) != 0:
+            playerid = r['result'][0]['playerid']
+            r = kodi.Player.Stop(playerid=playerid)
+            response.content_type = 'application/json'
+            return json.dumps(r, indent=4)
+        else:
+            return ''
+
+    elif method == 'getcurrentmedia':
+        r = kodi.Player.GetActivePlayers()
+        if len(r['result']) != 0:
+            playerid = r['result'][0]['playerid']
+            r = kodi.Player.GetItem(playerid=playerid)
+            # response.content_type = 'application/json'
+            # return json.dumps(r, indent=4)
+            return r['result']['item']['label']
+        else:
+                return ''
+
+    else:
+        try:
+            r = kodi.Player.Open(item={'file': method})
+            response.content_type = 'application/json'
+            return json.dumps(r, indent=4)
+        except Exception,e:
+            return 'failed: %s' % e
 
 @post('/ping')
 @protected(check_login, api=True)
