@@ -12,10 +12,10 @@ env.user = 'pi'
 env.use_ssh_config = True
 
 # Deploy files
-deploy_list = ['rPIserver.py', 'tdtool.py']
+deploy_list = ['rPIserver.py', 'tdtool.py', 'cacert.pem', 'home.mayeur.be.crt', 'home.mayeur.be.pem', 'rPIserver.cfg']
 project = 'rPIserver'
 config = project + '.conf'
-
+cd
 for f in deploy_list:
     if f.find('.py') > 0:
         compile(f)

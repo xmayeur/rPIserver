@@ -14,25 +14,25 @@
 # DON'T distribute this combined private/public key to clients!
 # (see http://www.piware.de/2011/01/creating-an-https-server-in-python/#comment-11380)
 import ConfigParser
-import csv
 import hashlib
 import json
 import logging
+import os
+import socket
 import subprocess
 import sys
-import os
+from datetime import datetime
+from functools import wraps
 from logging.handlers import RotatingFileHandler
+from time import sleep
+
+import tdtool
 from bottle import get, post, run, ServerAdapter, route, error, template, server_names, install
 from bottle import request, response, HTTPError, redirect, auth_basic
-import tdtool
-from kodipydent import Kodi
-from time import sleep
-from functools import wraps
-from datetime import datetime
 from fabric.api import env, settings
-from fabric.api import run as frun
 from fabric.api import local as flocal
-import socket
+from fabric.api import run as frun
+from kodipydent import Kodi
 
 project = 'rPIserver'
 INI_file = project + '.cfg'
@@ -133,7 +133,7 @@ def protected(check, realm="private", text="Access denied", api=False):
                 authenticated = check(user, password)
             else:
                 authenticated = True
-            if not authenticated and api == True:
+            if not authenticated and api is True:
                 response.headers['WWW-Authenticate'] = 'Basic realm="%s"' % realm
                 return HTTPError(401, text)
             elif not authenticated:
@@ -435,7 +435,6 @@ def do_kodifav():
     except Exception,e:
             return 'failed: %s' % e
 
-
     if method == 'favourites':
         fav = []
         r = kodi.Favourites.GetFavourites(properties=["window", "path", "thumbnail", "windowparameter"])
@@ -485,6 +484,7 @@ def do_kodifav():
         except Exception,e:
             return 'failed: %s' % e
 
+
 @post('/ping')
 @protected(check_login, api=True)
 def do_ping():
@@ -500,6 +500,7 @@ def do_ping():
         return 'Alive'
     except socket.error:
         return 'Failed'
+
 
 def send_to_pipe(p):
     while True:
